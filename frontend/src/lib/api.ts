@@ -1118,4 +1118,125 @@ export async function getRolledOptionsSymbols(): Promise<{
   return response.data
 }
 
+// ─── Insights API ───────────────────────────────────────────────────
+
+export interface MarketRegime {
+  regime: string
+  regime_label: string
+  vix: number | null
+  spy_price: number | null
+  position_size_pct: number
+  gex_regime: string | null
+  zero_gamma_level: number | null
+  timestamp: string
+}
+
+export interface VolatilitySnapshot {
+  symbol: string
+  current_iv: number | null
+  iv_rank: number | null
+  iv_percentile: number | null
+  hv_30: number | null
+  hv_60: number | null
+  hv_iv_ratio: number | null
+  hv_iv_divergence: number | null
+  strategy_recommendation: {
+    action: string
+    strategies: string[]
+    confidence: string
+    rationale: string
+  }
+  timestamp: string
+}
+
+export interface DailyInsight {
+  id: string
+  insight_type: string
+  priority: number
+  signal_score: number | null
+  title: string
+  description: string | null
+  action_items: any[] | null
+  related_symbol: string | null
+  strategy_type: string | null
+  signals_triggered: any[] | null
+  screening_template: string | null
+  is_acted_upon: boolean
+  outcome_pnl: number | null
+  valid_from: string | null
+  expires_at: string | null
+  created_at: string | null
+}
+
+export interface WatchlistItem {
+  id: string
+  symbol: string
+  notes: string | null
+  alert_on_ivr_above: number
+  alert_on_flow: boolean
+  added_at: string | null
+}
+
+export interface EarningsEvent {
+  symbol: string
+  date: string
+  time: string
+}
+
+export async function getMarketRegime(): Promise<MarketRegime> {
+  const response = await apiRequest<ApiResponse<MarketRegime>>('/insights/market/regime')
+  if (!response.data) {
+    throw new ApiError(500, 'No market regime data received')
+  }
+  return response.data
+}
+
+export async function getVolatilityScanner(symbols?: string, minIvr?: number): Promise<VolatilitySnapshot[]> {
+  let url = '/insights/volatility/scanner'
+  const params = new URLSearchParams()
+  if (symbols) params.set('symbols', symbols)
+  if (minIvr !== undefined) params.set('min_ivr', String(minIvr))
+  if (params.toString()) url += `?${params.toString()}`
+
+  const response = await apiRequest<{ data: VolatilitySnapshot[]; count: number }>(url)
+  return response.data || []
+}
+
+export async function getSymbolVolatility(symbol: string): Promise<VolatilitySnapshot> {
+  const response = await apiRequest<ApiResponse<VolatilitySnapshot>>(`/insights/volatility/${symbol}`)
+  if (!response.data) {
+    throw new ApiError(500, `No volatility data for ${symbol}`)
+  }
+  return response.data
+}
+
+export async function getDailyInsights(limit: number = 20): Promise<DailyInsight[]> {
+  const response = await apiRequest<{ data: DailyInsight[]; count: number }>(`/insights/daily?limit=${limit}`)
+  return response.data || []
+}
+
+export async function dismissInsight(insightId: string): Promise<void> {
+  await apiRequest<ApiResponse<void>>(`/insights/insights/${insightId}/dismiss`, 10000)
+}
+
+export async function getWatchlist(): Promise<WatchlistItem[]> {
+  const response = await apiRequest<{ data: WatchlistItem[]; count: number }>('/insights/watchlist')
+  return response.data || []
+}
+
+export async function addToWatchlist(symbol: string): Promise<void> {
+  await apiRequest<ApiResponse<void>>(`/insights/watchlist?symbol=${encodeURIComponent(symbol)}`, 10000)
+}
+
+export async function removeFromWatchlist(symbol: string): Promise<void> {
+  await apiRequest<ApiResponse<void>>(`/insights/watchlist/${encodeURIComponent(symbol)}`, 10000)
+}
+
+export async function getEarningsCalendar(symbols?: string): Promise<EarningsEvent[]> {
+  let url = '/insights/earnings'
+  if (symbols) url += `?symbols=${encodeURIComponent(symbols)}`
+  const response = await apiRequest<{ data: EarningsEvent[]; count: number }>(url)
+  return response.data || []
+}
+
 export { ApiError }

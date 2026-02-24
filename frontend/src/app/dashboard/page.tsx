@@ -8,6 +8,7 @@ import { InteractiveMetricCard } from '@/components/breakdown'
 import { RolledOptionsSection } from '@/components/RolledOptionsSection'
 import OptionsHistorySection from '@/components/OptionsHistorySection'
 import { SymbolLogo } from '@/components/ui/SymbolLogo'
+import { InsightsTab } from '@/components/insights'
 
 interface DashboardData {
   portfolio: PortfolioSummary | null
@@ -16,7 +17,7 @@ interface DashboardData {
   greeks: PortfolioGreeks | null
 }
 
-type TabType = 'portfolio' | 'stocks' | 'options' | 'rolled-options' | 'analysis'
+type TabType = 'portfolio' | 'stocks' | 'options' | 'rolled-options' | 'analysis' | 'insights'
 
 // Portfolio Tab Component
 function PortfolioTab({ dashboardData, formatCurrency, formatPercent }: {
@@ -1155,7 +1156,7 @@ export default function Dashboard() {
               <div className="bg-card rounded-lg border overflow-hidden">
                 <div className="border-b border-border">
                   <nav className="flex space-x-8 px-6" aria-label="Tabs">
-                    {(['portfolio', 'stocks', 'options', 'rolled-options', 'analysis'] as TabType[]).map((tab) => (
+                    {(['portfolio', 'stocks', 'options', 'rolled-options', 'analysis', 'insights'] as TabType[]).map((tab) => (
                       <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -1165,7 +1166,7 @@ export default function Dashboard() {
                             : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
                         } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
                       >
-                        {tab === 'rolled-options' ? 'Rolled Options' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                        {tab === 'rolled-options' ? 'Rolled Options' : tab === 'insights' ? 'Insights' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                         {tab === 'stocks' && dashboardData.stocks && (
                           <span className="ml-1 text-xs bg-muted rounded-full px-2 py-0.5">
                             {dashboardData.stocks.total_positions}
@@ -1213,6 +1214,7 @@ export default function Dashboard() {
                       {activeTab === 'options' && <OptionsTab options={dashboardData.options} greeks={dashboardData.greeks} formatCurrency={formatCurrency} formatPercent={formatPercent} onToggleChains={handleToggleChains} showChains={showChains} onChainClick={handleChainClick} refreshing={refreshing} />}
                       {activeTab === 'rolled-options' && <RolledOptionsTab formatCurrency={formatCurrency} formatPercent={formatPercent} />}
                       {activeTab === 'analysis' && <AnalysisTab formatCurrency={formatCurrency} formatPercent={formatPercent} />}
+                      {activeTab === 'insights' && <InsightsTab formatCurrency={formatCurrency} formatPercent={formatPercent} />}
                     </>
                   )}
                 </div>
