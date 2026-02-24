@@ -62,6 +62,23 @@ class Settings(BaseSettings):
     # API limits
     MAX_POSITIONS_PER_REQUEST: int = 1000
     MAX_ORDERS_PER_REQUEST: int = 500
+
+    # Market Data APIs (Insights Feature)
+    TRADIER_API_KEY: Optional[str] = None
+    TRADIER_BASE_URL: str = "https://api.tradier.com/v1"
+    POLYGON_API_KEY: Optional[str] = None
+    UNUSUAL_WHALES_API_KEY: Optional[str] = None
+
+    # TastyTrade API (pre-calculated IVR, IVP, IV index)
+    TASTYTRADE_USERNAME: Optional[str] = None
+    TASTYTRADE_PASSWORD: Optional[str] = None
+    TASTYTRADE_API_URL: str = "https://api.tastyworks.com"
+
+    # Insights Configuration
+    CACHE_TTL_MARKET_DATA: int = 300  # 5 minutes
+    CACHE_TTL_SIGNALS: int = 900  # 15 minutes
+    CACHE_TTL_INSIGHTS: int = 3600  # 1 hour
+    INSIGHTS_DEFAULT_WATCHLIST: str = "SPY,QQQ,IWM,AAPL,TSLA,NVDA,AMZN,META,MSFT,GOOGL"
     
     class Config:
         env_file = ".env"
