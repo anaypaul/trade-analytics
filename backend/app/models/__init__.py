@@ -4,14 +4,18 @@ from .user import User
 from .options_order import OptionsOrder
 from .options_position import OptionsPosition
 from .stock_position import StockPosition
-from .portfolio import Portfolio  
+from .portfolio import Portfolio
 from .cache_entry import CacheEntry
 from .rolled_options_chain import RolledOptionsChain, UserRolledOptionsSync
 from .options_pnl_cache import UserOptionsPnLCache, OptionsPnLProcessingLog
+from .daily_insight import DailyInsight
+from .market_signal import MarketSignal
+from .signal_performance import SignalPerformance
+from .user_watchlist import UserWatchlist
 
 __all__ = [
     "User",
-    "OptionsOrder", 
+    "OptionsOrder",
     "OptionsPosition",
     "StockPosition",
     "Portfolio",
@@ -19,5 +23,9 @@ __all__ = [
     "RolledOptionsChain",
     "UserRolledOptionsSync",
     "UserOptionsPnLCache",
-    "OptionsPnLProcessingLog"
+    "OptionsPnLProcessingLog",
+    "DailyInsight",
+    "MarketSignal",
+    "SignalPerformance",
+    "UserWatchlist",
 ]

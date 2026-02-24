@@ -61,7 +61,10 @@ async def init_db():
     """Initialize database"""
     try:
         # Import all models here to ensure they are registered
-        from app.models import user, portfolio, stock_position, options_position, options_order, cache_entry
+        from app.models import (
+            user, portfolio, stock_position, options_position, options_order,
+            cache_entry, daily_insight, market_signal, signal_performance, user_watchlist
+        )
         
         # Create all tables
         async with engine.begin() as conn:
