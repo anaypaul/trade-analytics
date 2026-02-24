@@ -16,6 +16,7 @@ from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 
 from app.services.rolled_options_cron_service import RolledOptionsCronService
 from app.services.options_orders_background_service import OptionsOrdersBackgroundService
+from app.services.insights_background_service import InsightsBackgroundService
 from app.models.job_execution_log import JobExecutionLog
 from app.core.database import get_db
 
@@ -29,6 +30,7 @@ class BackgroundScheduler:
         self.scheduler: Optional[AsyncIOScheduler] = None
         self.cron_service = RolledOptionsCronService()
         self.options_orders_service = OptionsOrdersBackgroundService()
+        self.insights_service = InsightsBackgroundService()
         self.is_running = False
     
     async def start(self):
@@ -83,7 +85,46 @@ class BackgroundScheduler:
                 name='Daily Database Cleanup',
                 replace_existing=True
             )
-            
+
+            # Insights: Market regime update (every 5 min, Mon-Fri 9:30-16:00 ET = 14:30-21:00 UTC)
+            self.scheduler.add_job(
+                func=self._market_regime_job,
+                trigger=CronTrigger(
+                    day_of_week='mon-fri',
+                    hour='14-20',
+                    minute='*/5',
+                ),
+                id='insights-market-regime',
+                name='Market Regime Update',
+                replace_existing=True
+            )
+
+            # Insights: Volatility scan (every 15 min, market hours)
+            self.scheduler.add_job(
+                func=self._volatility_scan_job,
+                trigger=CronTrigger(
+                    day_of_week='mon-fri',
+                    hour='14-20',
+                    minute='*/15',
+                ),
+                id='insights-volatility-scan',
+                name='Volatility Scanner',
+                replace_existing=True
+            )
+
+            # Insights: Daily insights generation (once at market open + mid-day)
+            self.scheduler.add_job(
+                func=self._daily_insights_job,
+                trigger=CronTrigger(
+                    day_of_week='mon-fri',
+                    hour='14,17',  # 9:30 AM + 12:30 PM ET
+                    minute=35,
+                ),
+                id='insights-daily-generation',
+                name='Daily Insights Generation',
+                replace_existing=True
+            )
+
             # Start the scheduler
             self.scheduler.start()
             self.is_running = True
@@ -248,6 +289,116 @@ class BackgroundScheduler:
         except Exception as e:
             logger.error(f"Daily cleanup job failed: {str(e)}", exc_info=True)
     
+    async def _market_regime_job(self):
+        """Background job to update market regime (VIX + classification)"""
+        job_start = datetime.now()
+        logger.info("Starting market regime update job")
+
+        log_entry = JobExecutionLog(
+            job_name="insights-market-regime",
+            job_id="insights-market-regime",
+            started_at=job_start,
+            triggered_manually=False
+        )
+
+        try:
+            result = await self.insights_service.run_market_regime_update()
+            job_end = datetime.now()
+            duration = (job_end - job_start).total_seconds()
+
+            log_entry.completed_at = job_end
+            log_entry.duration_seconds = duration
+            log_entry.status = 'success' if result.get('success') else 'error'
+            if not result.get('success'):
+                log_entry.error_message = result.get('message', 'Unknown error')
+
+            logger.info(f"Market regime job completed in {duration:.1f}s: {result}")
+
+        except Exception as e:
+            job_end = datetime.now()
+            log_entry.completed_at = job_end
+            log_entry.duration_seconds = (job_end - job_start).total_seconds()
+            log_entry.status = 'error'
+            log_entry.error_message = str(e)
+            logger.error(f"Market regime job failed: {e}", exc_info=True)
+
+        finally:
+            await self._save_job_log(log_entry)
+
+    async def _volatility_scan_job(self):
+        """Background job to scan watchlist for IVR/IVP"""
+        job_start = datetime.now()
+        logger.info("Starting volatility scan job")
+
+        log_entry = JobExecutionLog(
+            job_name="insights-volatility-scan",
+            job_id="insights-volatility-scan",
+            started_at=job_start,
+            triggered_manually=False
+        )
+
+        try:
+            result = await self.insights_service.run_volatility_scan()
+            job_end = datetime.now()
+            duration = (job_end - job_start).total_seconds()
+
+            log_entry.completed_at = job_end
+            log_entry.duration_seconds = duration
+            log_entry.status = 'success' if result.get('success') else 'error'
+            log_entry.orders_processed = result.get('scanned', 0)
+            if not result.get('success'):
+                log_entry.error_message = result.get('message', 'Unknown error')
+
+            logger.info(f"Volatility scan completed in {duration:.1f}s: {result}")
+
+        except Exception as e:
+            job_end = datetime.now()
+            log_entry.completed_at = job_end
+            log_entry.duration_seconds = (job_end - job_start).total_seconds()
+            log_entry.status = 'error'
+            log_entry.error_message = str(e)
+            logger.error(f"Volatility scan job failed: {e}", exc_info=True)
+
+        finally:
+            await self._save_job_log(log_entry)
+
+    async def _daily_insights_job(self):
+        """Background job to generate daily trade insights"""
+        job_start = datetime.now()
+        logger.info("Starting daily insights generation job")
+
+        log_entry = JobExecutionLog(
+            job_name="insights-daily-generation",
+            job_id="insights-daily-generation",
+            started_at=job_start,
+            triggered_manually=False
+        )
+
+        try:
+            result = await self.insights_service.run_daily_insights_generation()
+            job_end = datetime.now()
+            duration = (job_end - job_start).total_seconds()
+
+            log_entry.completed_at = job_end
+            log_entry.duration_seconds = duration
+            log_entry.status = 'success' if result.get('success') else 'error'
+            log_entry.orders_processed = result.get('insights_created', 0)
+            if not result.get('success'):
+                log_entry.error_message = result.get('message', 'Unknown error')
+
+            logger.info(f"Daily insights job completed in {duration:.1f}s: {result}")
+
+        except Exception as e:
+            job_end = datetime.now()
+            log_entry.completed_at = job_end
+            log_entry.duration_seconds = (job_end - job_start).total_seconds()
+            log_entry.status = 'error'
+            log_entry.error_message = str(e)
+            logger.error(f"Daily insights job failed: {e}", exc_info=True)
+
+        finally:
+            await self._save_job_log(log_entry)
+
     def _job_executed_listener(self, event):
         """Listener for successful job executions"""
         runtime = getattr(event, 'run_time', 0)

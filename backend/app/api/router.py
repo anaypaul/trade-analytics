@@ -4,7 +4,7 @@ Main API router that includes all endpoint routers
 
 from fastapi import APIRouter
 
-from app.api import auth, portfolio, stocks, options, breakdown, rolled_options, rolled_options_debug, rolled_options_v2, sync, scheduler_status, logo
+from app.api import auth, portfolio, stocks, options, breakdown, rolled_options, rolled_options_debug, rolled_options_v2, sync, scheduler_status, logo, insights
 
 # Create main API router
 api_router = APIRouter(prefix="/api/v1")
@@ -21,6 +21,7 @@ api_router.include_router(rolled_options_v2.router)  # New fast database-driven 
 api_router.include_router(sync.router)
 api_router.include_router(scheduler_status.router)
 api_router.include_router(logo.router)
+api_router.include_router(insights.router)
 
 # Add a simple health check for the API
 @api_router.get("/health")
@@ -36,6 +37,7 @@ async def api_health():
             "options": "/api/v1/options",
             "breakdown": "/api/v1/breakdown",
             "rolled_options": "/api/v1/rolled-options",
-            "sync": "/api/v1/sync"
+            "sync": "/api/v1/sync",
+            "insights": "/api/v1/insights"
         }
     }
